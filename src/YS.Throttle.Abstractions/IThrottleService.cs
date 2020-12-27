@@ -1,7 +1,10 @@
-﻿namespace YS.Throttle
+﻿using System.Threading.Tasks;
+
+namespace YS.Throttle
 {
     public interface IThrottleService
     {
-        bool ShouldPass(ThrottleCode throttleCode);
+        
+        Task<bool> ShouldPass(ThrottleCode throttleCode, ThrottleValue throttleValue);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using AspectCore.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using YS.AppContext;
@@ -11,13 +12,30 @@ namespace YS.Throttle
     {
         public string ContextKey { get; set; } = AppContextKeys.UserId;
         
-        public override Task Invoke(AspectContext context, AspectDelegate next)
+        public async override Task Invoke(AspectContext context, AspectDelegate next)
         {
             string functionCode = context.ImplementationMethod.GetFunctionCode();
             IAppContext appContext = context.ServiceProvider.GetRequiredService<IAppContext>();
-            object contextValue = appContext.GetValue(ContextKey);
-            string throttleCode = $"{functionCode}/{ContextKey}/{contextValue}";
-            return  Task.CompletedTask;
+            string contextValue =  appContext.GetValue(ContextKey)?.ToString();
+            var  throttleCode = new ThrottleCode
+            {
+                 ContextKind = ContextKey,
+                 FunctionCode = functionCode,
+                 ContextValue = contextValue
+            };
+            var throttleValue = new ThrottleValue();
+            
+            var throttleService = context.ServiceProvider.GetRequiredService<IThrottleService>();
+            if (await throttleService.ShouldPass(throttleCode, throttleValue))
+            {
+                
+                await next.Invoke(context);
+            }
+            else
+            {
+                throw new ApplicationException("Throttle limited.");
+                
+            }
         }
         
     }
